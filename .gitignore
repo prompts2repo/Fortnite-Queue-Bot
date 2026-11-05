@@ -1,0 +1,24 @@
+# AI Agent instructions & workspace customizations
+.agents/
+
+# Compiled Executables (Build artifacts)
+# (Binaries should be published through GitHub Releases)
+*.exe
+
+# IDE & Editor configuration
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Temporary & backup files
+*.bak
+*.tmp
+*~
+*.log
+
+# Windows system files
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
