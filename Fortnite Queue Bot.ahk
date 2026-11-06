@@ -12,7 +12,7 @@ if !FileExist(iconPath)
 try TraySetIcon(iconPath)
 
 ; ==========================================================
-; Fortnite Queue Bot — Windows 11 Fluent Gaming Dashboard (v3.9)
+; Fortnite Queue Bot — Windows 11 Fluent Gaming Dashboard (v4.0)
 ; ==========================================================
 
 ; Windows Registry configuration path (persists settings without creating any files on disk)
@@ -39,6 +39,10 @@ initAudioAlert   := Integer(RegRead(REG_SETTINGS, "AudioAlert", 1))
 if !(initAudioAlert = 0 || initAudioAlert = 1)
     initAudioAlert := 1
 
+; Load persisted lifetime statistics across all sessions
+initTotalRounds     := Integer(RegRead(REG_SETTINGS, "TotalRounds", 0))
+initTotalRuntimeSec := Integer(RegRead(REG_SETTINGS, "TotalRuntimeSec", 0))
+
 PlayBtn     := [initPlayX, initPlayY]
 OptionsBtn  := [initOptX, initOptY]
 LeaveBtn    := [initLeaveX, initLeaveY]
@@ -49,6 +53,9 @@ LobbyTime   := initLobbySec * 1000
 
 running := false
 rounds := 0
+totalRounds := initTotalRounds
+totalRuntimeSec := initTotalRuntimeSec
+sessionStartTick := A_TickCount
 phase := "Ready"
 phaseTick := 0
 gameStartTick := 0
@@ -152,7 +159,7 @@ CreateRoundedHBitmap(w, h, r, fillColor, borderColor := 0, borderWidth := 1, tex
 ; Each control receives a unique HBITMAP handle to avoid Win32 sharing errors
 ; ----------------------------------------------------------
 ; Header elements
-hVersionBadge    := CreateRoundedHBitmap(42, 20, 6, 0xFF182030, 0xFF2B374E, 1, "v3.9", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF0F131C)
+hVersionBadge    := CreateRoundedHBitmap(42, 20, 6, 0xFF182030, 0xFF2B374E, 1, "v4.0", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF0F131C)
 hTabDashActive   := CreateRoundedHBitmap(140, 36, 10, 0xFF7C3AED, 0, 0, "DASHBOARD", "Segoe UI", 10, 0xFFFFFFFF, true, 0xFF0F131C)
 hTabDashInactive := CreateRoundedHBitmap(140, 36, 10, 0xFF141A26, 0xFF222C3F, 1, "DASHBOARD", "Segoe UI", 10, 0xFF8E9AA8, true, 0xFF0F131C)
 hTabSetActive    := CreateRoundedHBitmap(140, 36, 10, 0xFF7C3AED, 0, 0, "SETTINGS", "Segoe UI", 10, 0xFFFFFFFF, true, 0xFF0F131C)
@@ -161,20 +168,23 @@ hMinBtn   := CreateRoundedHBitmap(32, 32, 8, 0xFF182030, 0xFF2B374E, 1, Chr(0xE9
 hCloseBtn := CreateRoundedHBitmap(32, 32, 8, 0xFF182030, 0xFF2B374E, 1, Chr(0xE8BB), "Segoe MDL2 Assets", 10, 0xFFFF6B81, false, 0xFF0F131C)
 
 ; Dashboard cards & buttons (Unique handles per control)
-hHeroCard    := CreateRoundedHBitmap(640, 146, 14, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
-hStatusRed   := CreateRoundedHBitmap(4, 118, 2, 0xFFEF4444, 0, 0, "", "", 0, 0, false, 0xFF131926)
-hStatusGreen := CreateRoundedHBitmap(4, 118, 2, 0xFF10B981, 0, 0, "", "", 0, 0, false, 0xFF131926)
-hStatCard1   := CreateRoundedHBitmap(202, 96, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
-hStatCard2   := CreateRoundedHBitmap(202, 96, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
-hStatCard3   := CreateRoundedHBitmap(202, 96, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
-hFooterStrip := CreateRoundedHBitmap(640, 48, 10, 0xFF101520, 0xFF1E2738, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hHeroCard    := CreateRoundedHBitmap(640, 134, 14, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hStatusRed   := CreateRoundedHBitmap(4, 114, 2, 0xFFEF4444, 0, 0, "", "", 0, 0, false, 0xFF131926)
+hStatusGreen := CreateRoundedHBitmap(4, 114, 2, 0xFF10B981, 0, 0, "", "", 0, 0, false, 0xFF131926)
+hStatCard1   := CreateRoundedHBitmap(202, 84, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hStatCard2   := CreateRoundedHBitmap(202, 84, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hStatCard3   := CreateRoundedHBitmap(202, 84, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hStatCard4   := CreateRoundedHBitmap(202, 84, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hStatCard5   := CreateRoundedHBitmap(202, 84, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hStatCard6   := CreateRoundedHBitmap(202, 84, 12, 0xFF131926, 0xFF222C3F, 1, "", "", 0, 0, false, 0xFF0B0E14)
+hFooterStrip := CreateRoundedHBitmap(640, 44, 10, 0xFF101520, 0xFF1E2738, 1, "", "", 0, 0, false, 0xFF0B0E14)
 
 ; Dynamic Start Button Generator
 MakeStartBtnBmp(isRunning, key) {
     if isRunning
-        return CreateRoundedHBitmap(640, 64, 14, 0xFFE11D48, 0, 0, "■   STOP AUTO QUEUE  (" StrUpper(key) ")", "Segoe UI", 13, 0xFFFFFFFF, true, 0xFF0B0E14)
+        return CreateRoundedHBitmap(640, 56, 12, 0xFFE11D48, 0, 0, "■   STOP AUTO QUEUE  (" StrUpper(key) ")", "Segoe UI", 12, 0xFFFFFFFF, true, 0xFF0B0E14)
     else
-        return CreateRoundedHBitmap(640, 64, 14, 0xFF7C3AED, 0, 0, "▶   START AUTO QUEUE  (" StrUpper(key) ")", "Segoe UI", 13, 0xFFFFFFFF, true, 0xFF0B0E14)
+        return CreateRoundedHBitmap(640, 56, 12, 0xFF7C3AED, 0, 0, "▶   START AUTO QUEUE  (" StrUpper(key) ")", "Segoe UI", 12, 0xFFFFFFFF, true, 0xFF0B0E14)
 }
 
 ; Settings cards (3 cards: Timings, Smart Multitasking, Coordinates & Presets)
@@ -225,8 +235,9 @@ hPillInactive_4K    := CreateRoundedHBitmap(54, 26, 6, 0xFF182030, 0xFF2B374E, 1
 hBtn_Auto           := CreateRoundedHBitmap(108, 26, 6, 0xFF7C3AED, 0, 0, "⚡ AUTO-DETECT", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
 
 ; Settings action buttons
-hSaveBtn  := CreateRoundedHBitmap(310, 44, 12, 0xFF7C3AED, 0, 0, "SAVE SETTINGS", "Segoe UI", 11, 0xFFFFFFFF, true, 0xFF0B0E14)
-hResetBtn := CreateRoundedHBitmap(310, 44, 12, 0xFF182030, 0xFF2B374E, 1, "RESET DEFAULTS", "Segoe UI", 11, 0xFF8E9AA8, true, 0xFF0B0E14)
+hSaveBtn       := CreateRoundedHBitmap(310, 42, 12, 0xFF7C3AED, 0, 0, "SAVE SETTINGS", "Segoe UI", 11, 0xFFFFFFFF, true, 0xFF0B0E14)
+hResetBtn      := CreateRoundedHBitmap(310, 42, 12, 0xFF182030, 0xFF2B374E, 1, "RESET DEFAULTS", "Segoe UI", 11, 0xFF8E9AA8, true, 0xFF0B0E14)
+hResetStatsBtn := CreateRoundedHBitmap(240, 30, 8, 0xFF182030, 0xFF2B374E, 1, "🗑   RESET LIFETIME STATS", "Segoe UI", 8, 0xFFE11D48, true, 0xFF0B0E14)
 
 ; ==========================================================
 ; Main GUI Construction
@@ -258,7 +269,7 @@ WM_ERASEBKGND(wParam, lParam, msg, hwnd) {
     NumPut("Int", 0, rB, 0), NumPut("Int", 59, rB, 4), NumPut("Int", 700, rB, 8), NumPut("Int", 60, rB, 12)
     DllCall("user32\FillRect", "Ptr", hdc, "Ptr", rB, "Ptr", hBrushBorder)
     rBody := Buffer(16, 0)
-    NumPut("Int", 0, rBody, 0), NumPut("Int", 60, rBody, 4), NumPut("Int", 700, rBody, 8), NumPut("Int", 550, rBody, 12)
+    NumPut("Int", 0, rBody, 0), NumPut("Int", 60, rBody, 4), NumPut("Int", 700, rBody, 8), NumPut("Int", 650, rBody, 12)
     DllCall("user32\FillRect", "Ptr", hdc, "Ptr", rBody, "Ptr", hBrushBody)
     return 1
 }
@@ -308,71 +319,99 @@ ClickableHwnds[CloseBtn.Hwnd] := true
 ; ==========================================================
 
 ; Hero Card
-HeroPic := AddCustomPicture("x30 y76 w640 h146", hHeroCard)
-StatusStripe := AddCustomPicture("x44 y90 w4 h118", hStatusRed)
+HeroPic := AddCustomPicture("x30 y74 w640 h134", hHeroCard)
+StatusStripe := AddCustomPicture("x44 y84 w4 h114", hStatusRed)
 
-StatusEyebrow := MainGui.AddText("x58 y92 w240 h16 Background131926 c8E9AA8", "SYSTEM STATUS")
+StatusEyebrow := MainGui.AddText("x58 y86 w240 h16 Background131926 c8E9AA8", "SYSTEM STATUS")
 StatusEyebrow.SetFont("s8 Bold", "Segoe UI")
-StatusDot := MainGui.AddText("x58 y114 w18 h28 Background131926 cEF4444", "●")
+StatusDot := MainGui.AddText("x58 y106 w18 h28 Background131926 cEF4444", "●")
 StatusDot.SetFont("s16 Bold", "Segoe UI")
-StatusText := MainGui.AddText("x80 y112 w260 h30 Background131926 cF8FAFC", "STOPPED")
+StatusText := MainGui.AddText("x80 y104 w260 h30 Background131926 cF8FAFC", "STOPPED")
 StatusText.SetFont("s16 Bold", "Segoe UI")
-PhaseText := MainGui.AddText("x58 y148 w310 h54 Background131926 c94A3B8", "Ready to queue. Press Start or hit " StrUpper(startHotkey) " to begin automated matchmaking.")
+PhaseText := MainGui.AddText("x58 y136 w310 h56 Background131926 c94A3B8", "Ready to queue. Press Start or hit " StrUpper(startHotkey) " to begin automated matchmaking.")
 PhaseText.SetFont("s9", "Segoe UI")
 
-Divider := MainGui.AddText("x390 y92 w1 h114 Background1E2738")
+Divider := MainGui.AddText("x390 y84 w1 h114 Background1E2738")
 
-TimerLabel := MainGui.AddText("x415 y92 w230 h16 Background131926 c8E9AA8", "CYCLE COUNTDOWN")
+TimerLabel := MainGui.AddText("x415 y86 w230 h16 Background131926 c8E9AA8", "CYCLE COUNTDOWN")
 TimerLabel.SetFont("s8 Bold", "Segoe UI")
-TimerText := MainGui.AddText("x415 y114 w230 h46 Background131926 cF8FAFC", "08:00")
-TimerText.SetFont("s28 Bold", "Segoe UI")
-TimerSub := MainGui.AddText("x415 y164 w230 h18 Background131926 c566273", "Next match trigger / return timer")
+TimerText := MainGui.AddText("x415 y104 w230 h44 Background131926 cF8FAFC", "08:00")
+TimerText.SetFont("s26 Bold", "Segoe UI")
+TimerSub := MainGui.AddText("x415 y154 w230 h16 Background131926 c566273", "Next match trigger / return timer")
 TimerSub.SetFont("s8", "Segoe UI")
 
-; 3 Metric Cards
-Stat1Pic := AddCustomPicture("x30 y236 w202 h96", hStatCard1)
-Stat1Lbl := MainGui.AddText("x46 y250 w170 h16 Background131926 c8E9AA8", "⏱   MATCH TIME")
+; Row 1: Session & Timing Metric Cards
+Stat1Pic := AddCustomPicture("x30 y218 w202 h84", hStatCard1)
+Stat1Lbl := MainGui.AddText("x46 y228 w170 h15 Background131926 c8E9AA8", "⏱   MATCH TIME")
 Stat1Lbl.SetFont("s8 Bold", "Segoe UI")
-GameValue := MainGui.AddText("x46 y272 w170 h30 Background131926 cF8FAFC", "08:00")
-GameValue.SetFont("s16 Bold", "Segoe UI")
-Stat1Sub := MainGui.AddText("x46 y304 w170 h16 Background131926 c566273", "in-game duration")
+GameValue := MainGui.AddText("x46 y245 w170 h28 Background131926 cF8FAFC", "08:00")
+GameValue.SetFont("s15 Bold", "Segoe UI")
+Stat1Sub := MainGui.AddText("x46 y275 w170 h15 Background131926 c566273", "in-game duration")
 Stat1Sub.SetFont("s8", "Segoe UI")
 
-Stat2Pic := AddCustomPicture("x249 y236 w202 h96", hStatCard2)
-Stat2Lbl := MainGui.AddText("x265 y250 w170 h16 Background131926 c8E9AA8", "⏳   LOBBY DELAY")
+Stat2Pic := AddCustomPicture("x249 y218 w202 h84", hStatCard2)
+Stat2Lbl := MainGui.AddText("x265 y228 w170 h15 Background131926 c8E9AA8", "⏳   LOBBY DELAY")
 Stat2Lbl.SetFont("s8 Bold", "Segoe UI")
-LobbyValue := MainGui.AddText("x265 y272 w170 h30 Background131926 cF8FAFC", "00:15")
-LobbyValue.SetFont("s16 Bold", "Segoe UI")
-Stat2Sub := MainGui.AddText("x265 y304 w170 h16 Background131926 c566273", "return cooldown")
+LobbyValue := MainGui.AddText("x265 y245 w170 h28 Background131926 cF8FAFC", "00:15")
+LobbyValue.SetFont("s15 Bold", "Segoe UI")
+Stat2Sub := MainGui.AddText("x265 y275 w170 h15 Background131926 c566273", "return cooldown")
 Stat2Sub.SetFont("s8", "Segoe UI")
 
-Stat3Pic := AddCustomPicture("x468 y236 w202 h96", hStatCard3)
-Stat3Lbl := MainGui.AddText("x484 y250 w170 h16 Background131926 c8E9AA8", "🏆   COMPLETED")
+Stat3Pic := AddCustomPicture("x468 y218 w202 h84", hStatCard3)
+Stat3Lbl := MainGui.AddText("x484 y228 w170 h15 Background131926 c8E9AA8", "🎯   SESSION ROUNDS")
 Stat3Lbl.SetFont("s8 Bold", "Segoe UI")
-RoundsValue := MainGui.AddText("x484 y272 w170 h30 Background131926 cF8FAFC", "0")
-RoundsValue.SetFont("s16 Bold", "Segoe UI")
-Stat3Sub := MainGui.AddText("x484 y304 w170 h16 Background131926 c566273", "rounds this session")
+RoundsValue := MainGui.AddText("x484 y245 w170 h28 Background131926 cF8FAFC", "0")
+RoundsValue.SetFont("s15 Bold", "Segoe UI")
+Stat3Sub := MainGui.AddText("x484 y275 w170 h15 Background131926 c566273", "rounds this session")
 Stat3Sub.SetFont("s8", "Segoe UI")
+
+; Row 2: Lifetime & Session Time Metric Cards
+Stat4Pic := AddCustomPicture("x30 y312 w202 h84", hStatCard4)
+Stat4Lbl := MainGui.AddText("x46 y322 w170 h15 Background131926 c8E9AA8", "⌛   SESSION TIME")
+Stat4Lbl.SetFont("s8 Bold", "Segoe UI")
+SessionTimeValue := MainGui.AddText("x46 y339 w170 h28 Background131926 cF8FAFC", "00:00:00")
+SessionTimeValue.SetFont("s15 Bold", "Segoe UI")
+Stat4Sub := MainGui.AddText("x46 y369 w170 h15 Background131926 c566273", "current session uptime")
+Stat4Sub.SetFont("s8", "Segoe UI")
+
+Stat5Pic := AddCustomPicture("x249 y312 w202 h84", hStatCard5)
+Stat5Lbl := MainGui.AddText("x265 y322 w170 h15 Background131926 c8E9AA8", "👑   TOTAL ROUNDS")
+Stat5Lbl.SetFont("s8 Bold", "Segoe UI")
+TotalRoundsValue := MainGui.AddText("x265 y339 w170 h28 Background131926 cF8FAFC", String(initTotalRounds))
+TotalRoundsValue.SetFont("s15 Bold", "Segoe UI")
+Stat5Sub := MainGui.AddText("x265 y369 w170 h15 Background131926 c566273", "all-time completed")
+Stat5Sub.SetFont("s8", "Segoe UI")
+
+Stat6Pic := AddCustomPicture("x468 y312 w202 h84", hStatCard6)
+Stat6Lbl := MainGui.AddText("x484 y322 w170 h15 Background131926 c8E9AA8", "🌐   TOTAL RUNTIME")
+Stat6Lbl.SetFont("s8 Bold", "Segoe UI")
+TotalRuntimeValue := MainGui.AddText("x484 y339 w170 h28 Background131926 cF8FAFC", FormatRuntime(initTotalRuntimeSec))
+TotalRuntimeValue.SetFont("s15 Bold", "Segoe UI")
+Stat6Sub := MainGui.AddText("x484 y369 w170 h15 Background131926 c566273", "all-time execution")
+Stat6Sub.SetFont("s8", "Segoe UI")
 
 ; Hero Action Button
 hStartCurBmp := MakeStartBtnBmp(false, startHotkey)
-StartBtn := AddCustomPicture("x30 y346 w640 h64", hStartCurBmp)
+StartBtn := AddCustomPicture("x30 y408 w640 h56", hStartCurBmp)
 StartBtn.OnEvent("Click", (*) => ToggleRunning())
 ClickableHwnds[StartBtn.Hwnd] := true
 
 ; Hotkey Footer Strip
-FooterPic := AddCustomPicture("x30 y422 w640 h48", hFooterStrip)
-HomeHint := MainGui.AddText("x30 y436 w640 h20 Background101520 c8E9AA8 Center", "[ " StrUpper(startHotkey) " ]  START / STOP      •      [ F9 ]  COPY COORDS      •      [ F10 ]  EXIT")
+FooterPic := AddCustomPicture("x30 y472 w640 h44", hFooterStrip)
+HomeHint := MainGui.AddText("x30 y484 w640 h20 Background101520 c8E9AA8 Center", "[ " StrUpper(startHotkey) " ]  START / STOP      •      [ F9 ]  COPY COORDS      •      [ F10 ]  EXIT")
 HomeHint.SetFont("s8 Bold", "Segoe UI")
 
 ; Multitasking Indicator Line
-HomeMultitaskTag := MainGui.AddText("x30 y480 w640 h20 Background0B0E14 c8E9AA8 Center", "⚡ SMART MULTITASKING: DISABLED  (Enable in Settings to use PC during matches)")
+HomeMultitaskTag := MainGui.AddText("x30 y524 w640 h20 Background0B0E14 c8E9AA8 Center", "⚡ SMART MULTITASKING: DISABLED  (Enable in Settings to use PC during matches)")
 HomeMultitaskTag.SetFont("s8 Bold", "Segoe UI")
 
 HomeControls := [HeroPic, StatusStripe, StatusEyebrow, StatusDot, StatusText, PhaseText, Divider, TimerLabel, TimerText, TimerSub
     , Stat1Pic, Stat1Lbl, GameValue, Stat1Sub
     , Stat2Pic, Stat2Lbl, LobbyValue, Stat2Sub
     , Stat3Pic, Stat3Lbl, RoundsValue, Stat3Sub
+    , Stat4Pic, Stat4Lbl, SessionTimeValue, Stat4Sub
+    , Stat5Pic, Stat5Lbl, TotalRoundsValue, Stat5Sub
+    , Stat6Pic, Stat6Lbl, TotalRuntimeValue, Stat6Sub
     , StartBtn, FooterPic, HomeHint, HomeMultitaskTag]
 
 ; ==========================================================
@@ -585,15 +624,19 @@ LeaveX.OnEvent("Change", HandleCoordChange.Bind(LeaveX, LeaveY, "Lobby"))
 LeaveY.OnEvent("Change", HandleCoordChange.Bind(LeaveX, LeaveY, "Lobby"))
 
 ; Action Buttons
-SaveBtn := AddCustomPicture("x30 y450 w310 h44 Hidden", hSaveBtn)
+SaveBtn := AddCustomPicture("x30 y446 w310 h42 Hidden", hSaveBtn)
 SaveBtn.OnEvent("Click", (*) => SaveSettings())
 ClickableHwnds[SaveBtn.Hwnd] := true
 
-ResetBtn := AddCustomPicture("x360 y450 w310 h44 Hidden", hResetBtn)
+ResetBtn := AddCustomPicture("x360 y446 w310 h42 Hidden", hResetBtn)
 ResetBtn.OnEvent("Click", (*) => ResetSettings())
 ClickableHwnds[ResetBtn.Hwnd] := true
 
-SettingsHint := MainGui.AddText("x30 y502 w640 h16 Background0B0E14 c566273 Center Hidden", "Changes take effect starting on the next queue cycle.")
+ResetStatsBtn := AddCustomPicture("x230 y496 w240 h30 Hidden", hResetStatsBtn)
+ResetStatsBtn.OnEvent("Click", (*) => ResetLifetimeStats())
+ClickableHwnds[ResetStatsBtn.Hwnd] := true
+
+SettingsHint := MainGui.AddText("x30 y532 w640 h16 Background0B0E14 c566273 Center Hidden", "Changes take effect starting on the next queue cycle.")
 SettingsHint.SetFont("s8", "Segoe UI")
 
 SettingsControls := [Card1Pic, TimingHead, TimingSub, GameLabel, GameBoxPic, GameEdit, GameUnit
@@ -604,7 +647,7 @@ SettingsControls := [Card1Pic, TimingHead, TimingSub, GameLabel, GameBoxPic, Gam
     , PlayLabel, PlayXTag, PlayXBoxPic, PlayX, PlayYTag, PlayYBoxPic, PlayY
     , OptionsLabel, OptionsXTag, OptionsXBoxPic, OptionsX, OptionsYTag, OptionsYBoxPic, OptionsY
     , LeaveLabel, LeaveXTag, LeaveXBoxPic, LeaveX, LeaveYTag, LeaveYBoxPic, LeaveY
-    , SaveBtn, ResetBtn, SettingsHint]
+    , SaveBtn, ResetBtn, ResetStatsBtn, SettingsHint]
 
 ; ==========================================================
 ; Window Events & Dragging
@@ -664,7 +707,7 @@ WM_LBUTTONUP(wParam, lParam, msg, hwnd) {
 ; ==========================================================
 ; Show Window & Apply Native Windows 11 Styling
 ; ==========================================================
-MainGui.Show("w700 h540")
+MainGui.Show("w700 h565")
 
 ; Windows 11 Native Rounded Corners via DWM (DWMWA_WINDOW_CORNER_PREFERENCE = 33, DWMWCP_ROUND = 2)
 try DllCall("dwmapi\DwmSetWindowAttribute", "Ptr", MainGui.Hwnd, "UInt", 33, "Int*", 2, "UInt", 4)
@@ -994,8 +1037,31 @@ ResetSettings() {
     SelectSmartRestore(0)
     SelectAudioAlert(1)
     ApplyAutoDetect()
+    savedTotalR := Integer(RegRead(REG_SETTINGS, "TotalRounds", 0))
+    savedTotalSec := Integer(RegRead(REG_SETTINGS, "TotalRuntimeSec", 0))
     try RegDeleteKey(REG_SETTINGS)
+    try {
+        RegWrite(savedTotalR, "REG_DWORD", REG_SETTINGS, "TotalRounds")
+        RegWrite(savedTotalSec, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
+    }
     SaveSettings()
+}
+
+ResetLifetimeStats() {
+    result := MsgBox("Are you sure you want to reset all lifetime statistics?`n`nTotal Rounds and Total Runtime will be reset to 0.", "Reset Lifetime Stats", "YesNo Icon?")
+    if (result = "Yes") {
+        global totalRounds, totalRuntimeSec, sessionStartTick, REG_SETTINGS
+        totalRounds := 0
+        totalRuntimeSec := 0
+        sessionStartTick := A_TickCount
+        try {
+            RegWrite(0, "REG_DWORD", REG_SETTINGS, "TotalRounds")
+            RegWrite(0, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
+        }
+        UpdateUI()
+        ToolTip "Lifetime stats reset to zero."
+        SetTimer () => ToolTip(), -2000
+    }
 }
 
 HotkeyContext(*) {
@@ -1090,7 +1156,7 @@ ForceWinActivate(hwnd) {
 }
 
 MainLoop() {
-    global running, PlayBtn, OptionsBtn, LeaveBtn, InGameTime, LoadTime, LobbyTime, rounds
+    global running, PlayBtn, OptionsBtn, LeaveBtn, InGameTime, LoadTime, LobbyTime, rounds, totalRounds, REG_SETTINGS
     global phase, phaseTick, gameStartTick
     while running {
         phase := "Searching for a match..."
@@ -1107,6 +1173,8 @@ MainLoop() {
         UpdateUI()
         DoLeaveAction()
         rounds += 1
+        totalRounds += 1
+        try RegWrite(totalRounds, "REG_DWORD", REG_SETTINGS, "TotalRounds")
         gameStartTick := 0
         phase := "Lobby cooldown"
         phaseTick := A_TickCount
@@ -1245,9 +1313,11 @@ ClickAt(pos) {
 
 ; High-performance anti-flicker UI updater
 UpdateUI(*) {
-    global running, phase, phaseTick, gameStartTick, InGameTime, LoadTime, LobbyTime, rounds
-    global StatusStripe, StatusDot, StatusText, PhaseText, TimerText, GameValue, LobbyValue, RoundsValue, StartBtn, HomeHint, startHotkey
-    global hStatusRed, hStatusGreen, HomeMultitaskTag, smartRestore
+    global running, phase, phaseTick, gameStartTick, InGameTime, LoadTime, LobbyTime, rounds, totalRounds
+    global StatusStripe, StatusDot, StatusText, PhaseText, TimerText, GameValue, LobbyValue, RoundsValue
+    global SessionTimeValue, TotalRoundsValue, TotalRuntimeValue
+    global StartBtn, HomeHint, startHotkey, hStatusRed, hStatusGreen, HomeMultitaskTag, smartRestore
+    global sessionStartTick, initTotalRuntimeSec, REG_SETTINGS
 
     static prevRunning := -1
     static prevPhase := ""
@@ -1255,8 +1325,20 @@ UpdateUI(*) {
     static prevGame := ""
     static prevLobby := ""
     static prevRounds := -1
+    static prevSessionTime := ""
+    static prevTotalRounds := -1
+    static prevTotalRuntime := ""
     static prevHotkey := ""
     static prevSmart := -1
+    static lastPersistTick := 0
+
+    ; Periodic total runtime registry persistence (every 10 seconds)
+    sessionElapsedSec := Floor((A_TickCount - sessionStartTick) / 1000)
+    curTotalRuntimeSec := initTotalRuntimeSec + sessionElapsedSec
+    if (A_TickCount - lastPersistTick >= 10000) {
+        lastPersistTick := A_TickCount
+        try RegWrite(curTotalRuntimeSec, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
+    }
 
     ; Only update buttons and status badge when running state flips
     if (running != prevRunning) {
@@ -1320,6 +1402,23 @@ UpdateUI(*) {
         RoundsValue.Text := rounds
     }
 
+    curSessionTime := FormatSessionTime(sessionElapsedSec)
+    if (curSessionTime != prevSessionTime) {
+        prevSessionTime := curSessionTime
+        SessionTimeValue.Text := curSessionTime
+    }
+
+    if (totalRounds != prevTotalRounds) {
+        prevTotalRounds := totalRounds
+        TotalRoundsValue.Text := totalRounds
+    }
+
+    curTotalRuntime := FormatRuntime(curTotalRuntimeSec)
+    if (curTotalRuntime != prevTotalRuntime) {
+        prevTotalRuntime := curTotalRuntime
+        TotalRuntimeValue.Text := curTotalRuntime
+    }
+
     if (startHotkey != prevHotkey) {
         prevHotkey := startHotkey
         HomeHint.Text := "[ " StrUpper(startHotkey) " ]  START / STOP      •      [ F9 ]  COPY COORDS      •      [ F10 ]  EXIT"
@@ -1341,4 +1440,39 @@ UpdateUI(*) {
 FormatTimeLeft(ms) {
     totalSeconds := Ceil(Max(0, ms) / 1000)
     return Format("{:02}:{:02}", Floor(totalSeconds / 60), Mod(totalSeconds, 60))
+}
+
+FormatSessionTime(sec) {
+    sec := Max(0, sec)
+    hours := Floor(sec / 3600)
+    rem := Mod(sec, 3600)
+    mins := Floor(rem / 60)
+    secs := Mod(rem, 60)
+    return Format("{:02}:{:02}:{:02}", hours, mins, secs)
+}
+
+FormatRuntime(sec) {
+    sec := Max(0, sec)
+    days := Floor(sec / 86400)
+    rem := Mod(sec, 86400)
+    hours := Floor(rem / 3600)
+    rem := Mod(rem, 3600)
+    mins := Floor(rem / 60)
+    secs := Mod(rem, 60)
+
+    if (days > 0)
+        return days "d " hours "h " mins "m"
+    else if (hours > 0)
+        return hours "h " Format("{:02}m", mins) " " Format("{:02}s", secs)
+    else
+        return Format("{:02}m {:02}s", mins, secs)
+}
+
+OnExit SaveOnExit
+SaveOnExit(exitReason, exitCode) {
+    global initTotalRuntimeSec, sessionStartTick, REG_SETTINGS
+    try {
+        finalSec := initTotalRuntimeSec + Floor((A_TickCount - sessionStartTick) / 1000)
+        RegWrite(finalSec, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
+    }
 }

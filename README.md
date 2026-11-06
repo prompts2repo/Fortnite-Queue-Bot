@@ -1,6 +1,6 @@
 # Fortnite Queue Bot 🎮
 
-[![Version](https://img.shields.io/badge/version-3.9-purple.svg)](https://github.com/)
+[![Version](https://img.shields.io/badge/version-4.0-purple.svg)](https://github.com/)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-blue.svg)](https://www.microsoft.com/windows)
 [![Language](https://img.shields.io/badge/language-AutoHotkey%20v2-334455.svg)](https://www.autohotkey.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -19,12 +19,13 @@ An automated matchmaking and queue cycle manager for **Fortnite**, built with **
 
 ## 🌟 Key Features
 
+- **Lifetime & Session Statistics**: Displays live session metrics (match duration, lobby delay, session rounds, current session uptime) as well as persistent lifetime statistics (total completed rounds across all sessions, cumulative program execution time) directly on the dashboard.
 - **Smart Multitasking Mode**: Brings Fortnite to the foreground only for 2–3 seconds to click, then instantly restores your previous active window and mouse position. Includes an optional 3-second audio pre-alert.
 - **Full Multi-Monitor Support**: Automatically detects which monitor runs Fortnite (left, right, top, or secondary) and normalizes coordinate offsets seamlessly.
 - **1-Click Resolution Presets**: Instant coordinate setup for `1080p` (FHD), `1440p` (2K/QHD), `4K` (UHD), and an `Auto-Detect` button for dynamic scaling.
-- **Fluent Gaming UI**: Smooth dark-mode interface (`#0B0E14`) with live round counters, match timers, and cycle status.
+- **Fluent Gaming UI**: Smooth dark-mode interface (`#0B0E14`) with live round counters, match timers, lifetime metrics, and cycle status.
 - **Smart Coordinate Helper (<kbd>F9</kbd>)**: Press <kbd>F9</kbd> in-game to copy exact button coordinates, and paste them directly into Settings (<kbd>Ctrl</kbd> + <kbd>V</kbd>).
-- **Portable & Lightweight**: Zero disk files; all preferences persist directly in the Windows Registry (`HKCU\Software\FortniteQueueBot`).
+- **Portable & Lightweight**: Zero disk files; all preferences and lifetime statistics persist directly in the Windows Registry (`HKCU\Software\FortniteQueueBot`).
 
 ---
 
