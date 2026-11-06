@@ -274,9 +274,11 @@ WM_ERASEBKGND(wParam, lParam, msg, hwnd) {
     return 1
 }
 
-; Brand Title (Clicking title also allows dragging window natively via WM_NCHITTEST)
-Brand := MainGui.AddText("x26 y17 w166 h28 Background0F131C cF8FAFC", "Fortnite Queue Bot")
+; Brand Title (Clicking opens GitHub repository)
+Brand := MainGui.AddText("x26 y17 w166 h28 Background0F131C cF8FAFC +0x100", "Fortnite Queue Bot")
 Brand.SetFont("s13 Bold", "Segoe UI")
+Brand.OnEvent("Click", (*) => Run("https://github.com/prompts2repo/Fortnite-Queue-Bot"))
+ClickableHwnds[Brand.Hwnd] := true
 
 ; Helper to swap bitmap on Picture control safely without Win32/AHK handle invalidation
 SetCtrlBitmap(ctrl, hBitmap, deletePrevious := false) {
@@ -293,8 +295,10 @@ AddCustomPicture(options, hBitmap) {
     return ctrl
 }
 
-; Version Badge
+; Version Badge (Clicking opens GitHub repository)
 VersionBadge := AddCustomPicture("x196 y19 w42 h20", hVersionBadge)
+VersionBadge.OnEvent("Click", (*) => Run("https://github.com/prompts2repo/Fortnite-Queue-Bot"))
+ClickableHwnds[VersionBadge.Hwnd] := true
 
 ; Navigation Tabs
 NavHome := AddCustomPicture("x275 y12 w140 h36", hTabDashActive)
@@ -665,6 +669,8 @@ WM_NCHITTEST(wParam, lParam, msg, hwnd) {
     relX := ptX - wx
     relY := ptY - wy
     if relY <= 60 {
+        if (relX >= 26 && relX <= 240 && relY >= 14 && relY <= 48)
+            return 1 ; Let Brand title & version badge receive clicks to open repository
         if (relX >= 270 && relX <= 570) || relX >= 610
             return 1 ; Let tabs and control buttons receive clicks
         return 2 ; Top header drag (HTCAPTION)
@@ -673,13 +679,13 @@ WM_NCHITTEST(wParam, lParam, msg, hwnd) {
 
 OnMessage(0x201, WM_LBUTTONDOWN)
 WM_LBUTTONDOWN(wParam, lParam, msg, hwnd) {
-    global MainGui, MinBtn, CloseBtn, NavHome, NavSettings
-    if (hwnd == MinBtn.Hwnd || hwnd == CloseBtn.Hwnd || hwnd == NavHome.Hwnd || hwnd == NavSettings.Hwnd)
+    global MainGui, MinBtn, CloseBtn, NavHome, NavSettings, Brand, VersionBadge
+    if (hwnd == MinBtn.Hwnd || hwnd == CloseBtn.Hwnd || hwnd == NavHome.Hwnd || hwnd == NavSettings.Hwnd || hwnd == Brand.Hwnd || hwnd == VersionBadge.Hwnd)
         return
     CoordMode "Mouse", "Window"
     MouseGetPos &mx, &my
     CoordMode "Mouse", "Screen"
-    if (my <= 60 && !(mx >= 270 && mx <= 570) && mx < 610) {
+    if (my <= 60 && !(mx >= 26 && mx <= 240 && my >= 14 && my <= 48) && !(mx >= 270 && mx <= 570) && mx < 610) {
         DllCall("user32\ReleaseCapture")
         PostMessage 0xA1, 2,,, "ahk_id " MainGui.Hwnd ; WM_NCLBUTTONDOWN, HTCAPTION
     }

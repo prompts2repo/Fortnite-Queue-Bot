@@ -1,6 +1,6 @@
 # Fortnite Queue Bot 🎮
 
-[![Version](https://img.shields.io/badge/version-4.0-purple.svg)](https://github.com/)
+[![Version](https://img.shields.io/badge/version-4.0-purple.svg)](https://github.com/prompts2repo/Fortnite-Queue-Bot)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-blue.svg)](https://www.microsoft.com/windows)
 [![Language](https://img.shields.io/badge/language-AutoHotkey%20v2-334455.svg)](https://www.autohotkey.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -32,7 +32,7 @@ An automated matchmaking and queue cycle manager for **Fortnite**, built with **
 ## 🚀 Quick Start
 
 ### Option 1: Standalone Executable (Recommended)
-1. Download **`Fortnite Queue Bot.exe`** from the [Releases](https://github.com/) section.
+1. Download **`Fortnite Queue Bot.exe`** from the [Releases](https://github.com/prompts2repo/Fortnite-Queue-Bot/releases) section.
 2. Launch Fortnite, then run `Fortnite Queue Bot.exe`.
 
 ### Option 2: From Source
