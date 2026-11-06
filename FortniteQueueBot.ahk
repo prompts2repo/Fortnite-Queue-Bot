@@ -6,7 +6,7 @@ CoordMode "Mouse", "Screen"
 try DllCall("shell32\SetCurrentProcessExplicitAppUserModelID", "WStr", "FortniteQueueBot.App")
 
 ; Set Tray and Application Icons
-iconPath := A_ScriptDir "\Fortnite Queue Bot.ico"
+iconPath := A_ScriptDir "\FortniteQueueBot.ico"
 if !FileExist(iconPath)
     iconPath := A_ScriptDir "\AutoQueueFN.ico"
 try TraySetIcon(iconPath)
@@ -55,7 +55,9 @@ running := false
 rounds := 0
 totalRounds := initTotalRounds
 totalRuntimeSec := initTotalRuntimeSec
-sessionStartTick := A_TickCount
+sessionActiveSec := 0
+activeStartTick := 0
+matchInProgress := false
 phase := "Ready"
 phaseTick := 0
 gameStartTick := 0
@@ -375,7 +377,7 @@ Stat4Lbl := MainGui.AddText("x46 y322 w170 h15 Background131926 c8E9AA8", "⌛  
 Stat4Lbl.SetFont("s8 Bold", "Segoe UI")
 SessionTimeValue := MainGui.AddText("x46 y339 w170 h28 Background131926 cF8FAFC", "00:00:00")
 SessionTimeValue.SetFont("s15 Bold", "Segoe UI")
-Stat4Sub := MainGui.AddText("x46 y369 w170 h15 Background131926 c566273", "current session uptime")
+Stat4Sub := MainGui.AddText("x46 y369 w170 h15 Background131926 c566273", "active queue duration")
 Stat4Sub.SetFont("s8", "Segoe UI")
 
 Stat5Pic := AddCustomPicture("x249 y312 w202 h84", hStatCard5)
@@ -391,7 +393,7 @@ Stat6Lbl := MainGui.AddText("x484 y322 w170 h15 Background131926 c8E9AA8", "🌐
 Stat6Lbl.SetFont("s8 Bold", "Segoe UI")
 TotalRuntimeValue := MainGui.AddText("x484 y339 w170 h28 Background131926 cF8FAFC", FormatRuntime(initTotalRuntimeSec))
 TotalRuntimeValue.SetFont("s15 Bold", "Segoe UI")
-Stat6Sub := MainGui.AddText("x484 y369 w170 h15 Background131926 c566273", "all-time execution")
+Stat6Sub := MainGui.AddText("x484 y369 w170 h15 Background131926 c566273", "lifetime queue execution")
 Stat6Sub.SetFont("s8", "Segoe UI")
 
 ; Hero Action Button
@@ -1036,15 +1038,16 @@ SaveSettings() {
 }
 
 ResetSettings() {
-    global GameEdit, LobbyEdit, REG_SETTINGS
+    global GameEdit, LobbyEdit, REG_SETTINGS, totalRounds, initTotalRuntimeSec, sessionActiveSec, activeStartTick, running
     GameEdit.Value := "8"
     LobbyEdit.Value := "15"
     SelectKey("F8")
     SelectSmartRestore(0)
     SelectAudioAlert(1)
     ApplyAutoDetect()
-    savedTotalR := Integer(RegRead(REG_SETTINGS, "TotalRounds", 0))
-    savedTotalSec := Integer(RegRead(REG_SETTINGS, "TotalRuntimeSec", 0))
+    savedTotalR := totalRounds
+    currentRunSec := (running && activeStartTick) ? Floor((A_TickCount - activeStartTick) / 1000) : 0
+    savedTotalSec := initTotalRuntimeSec + sessionActiveSec + currentRunSec
     try RegDeleteKey(REG_SETTINGS)
     try {
         RegWrite(savedTotalR, "REG_DWORD", REG_SETTINGS, "TotalRounds")
@@ -1056,10 +1059,14 @@ ResetSettings() {
 ResetLifetimeStats() {
     result := MsgBox("Are you sure you want to reset all lifetime statistics?`n`nTotal Rounds and Total Runtime will be reset to 0.", "Reset Lifetime Stats", "YesNo Icon?")
     if (result = "Yes") {
-        global totalRounds, totalRuntimeSec, sessionStartTick, REG_SETTINGS
+        global totalRounds, initTotalRuntimeSec, sessionActiveSec, activeStartTick, running, REG_SETTINGS
         totalRounds := 0
-        totalRuntimeSec := 0
-        sessionStartTick := A_TickCount
+        initTotalRuntimeSec := 0
+        sessionActiveSec := 0
+        if (running)
+            activeStartTick := A_TickCount
+        else
+            activeStartTick := 0
         try {
             RegWrite(0, "REG_DWORD", REG_SETTINGS, "TotalRounds")
             RegWrite(0, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
@@ -1076,16 +1083,30 @@ HotkeyContext(*) {
 }
 
 ToggleRunning(*) {
-    global running, phase, phaseTick, gameStartTick
+    global running, phase, phaseTick, gameStartTick, activeStartTick, sessionActiveSec, initTotalRuntimeSec, REG_SETTINGS
+    global matchInProgress, rounds, totalRounds
     running := !running
     if running {
         phase := "Starting queue..."
         phaseTick := A_TickCount
         gameStartTick := 0
+        activeStartTick := A_TickCount
         SetTimer MainLoop, -10
     } else {
         phase := "Stopped"
         phaseTick := A_TickCount
+        if (activeStartTick) {
+            sessionActiveSec += Floor((A_TickCount - activeStartTick) / 1000)
+            activeStartTick := 0
+            try RegWrite(initTotalRuntimeSec + sessionActiveSec, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
+        }
+        if (matchInProgress) {
+            matchInProgress := false
+            rounds += 1
+            totalRounds += 1
+            try RegWrite(totalRounds, "REG_DWORD", REG_SETTINGS, "TotalRounds")
+        }
+        gameStartTick := 0
         ToolTip ; Clear any active countdown tooltip
     }
     UpdateUI()
@@ -1163,12 +1184,15 @@ ForceWinActivate(hwnd) {
 
 MainLoop() {
     global running, PlayBtn, OptionsBtn, LeaveBtn, InGameTime, LoadTime, LobbyTime, rounds, totalRounds, REG_SETTINGS
-    global phase, phaseTick, gameStartTick
+    global phase, phaseTick, gameStartTick, matchInProgress
     while running {
         phase := "Searching for a match..."
         phaseTick := A_TickCount
         UpdateUI()
         DoPlayAction()
+        if !running
+            return
+        matchInProgress := true
         if !WaitPhase(LoadTime, "Match loading...")
             return
         gameStartTick := A_TickCount
@@ -1178,9 +1202,12 @@ MainLoop() {
         phaseTick := A_TickCount
         UpdateUI()
         DoLeaveAction()
-        rounds += 1
-        totalRounds += 1
-        try RegWrite(totalRounds, "REG_DWORD", REG_SETTINGS, "TotalRounds")
+        if (matchInProgress) {
+            matchInProgress := false
+            rounds += 1
+            totalRounds += 1
+            try RegWrite(totalRounds, "REG_DWORD", REG_SETTINGS, "TotalRounds")
+        }
         gameStartTick := 0
         phase := "Lobby cooldown"
         phaseTick := A_TickCount
@@ -1323,7 +1350,7 @@ UpdateUI(*) {
     global StatusStripe, StatusDot, StatusText, PhaseText, TimerText, GameValue, LobbyValue, RoundsValue
     global SessionTimeValue, TotalRoundsValue, TotalRuntimeValue
     global StartBtn, HomeHint, startHotkey, hStatusRed, hStatusGreen, HomeMultitaskTag, smartRestore
-    global sessionStartTick, initTotalRuntimeSec, REG_SETTINGS
+    global initTotalRuntimeSec, sessionActiveSec, activeStartTick, REG_SETTINGS
 
     static prevRunning := -1
     static prevPhase := ""
@@ -1338,10 +1365,13 @@ UpdateUI(*) {
     static prevSmart := -1
     static lastPersistTick := 0
 
-    ; Periodic total runtime registry persistence (every 10 seconds)
-    sessionElapsedSec := Floor((A_TickCount - sessionStartTick) / 1000)
-    curTotalRuntimeSec := initTotalRuntimeSec + sessionElapsedSec
-    if (A_TickCount - lastPersistTick >= 10000) {
+    ; Calculate active execution time (only accumulates when Auto Queue is active)
+    currentRunSec := (running && activeStartTick) ? Floor((A_TickCount - activeStartTick) / 1000) : 0
+    curSessionTimeSec := sessionActiveSec + currentRunSec
+    curTotalRuntimeSec := initTotalRuntimeSec + curSessionTimeSec
+
+    ; Periodic total runtime registry persistence (every 10 seconds while running)
+    if (running && A_TickCount - lastPersistTick >= 10000) {
         lastPersistTick := A_TickCount
         try RegWrite(curTotalRuntimeSec, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
     }
@@ -1408,7 +1438,7 @@ UpdateUI(*) {
         RoundsValue.Text := rounds
     }
 
-    curSessionTime := FormatSessionTime(sessionElapsedSec)
+    curSessionTime := FormatSessionTime(curSessionTimeSec)
     if (curSessionTime != prevSessionTime) {
         prevSessionTime := curSessionTime
         SessionTimeValue.Text := curSessionTime
@@ -1476,9 +1506,15 @@ FormatRuntime(sec) {
 
 OnExit SaveOnExit
 SaveOnExit(exitReason, exitCode) {
-    global initTotalRuntimeSec, sessionStartTick, REG_SETTINGS
+    global initTotalRuntimeSec, sessionActiveSec, activeStartTick, running, matchInProgress, totalRounds, REG_SETTINGS
     try {
-        finalSec := initTotalRuntimeSec + Floor((A_TickCount - sessionStartTick) / 1000)
+        currentRunSec := (running && activeStartTick) ? Floor((A_TickCount - activeStartTick) / 1000) : 0
+        finalSec := initTotalRuntimeSec + sessionActiveSec + currentRunSec
         RegWrite(finalSec, "REG_DWORD", REG_SETTINGS, "TotalRuntimeSec")
+        if (matchInProgress) {
+            matchInProgress := false
+            totalRounds += 1
+            RegWrite(totalRounds, "REG_DWORD", REG_SETTINGS, "TotalRounds")
+        }
     }
 }

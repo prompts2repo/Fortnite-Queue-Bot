@@ -9,9 +9,9 @@ echo.
 
 cd /d "%~dp0"
 
-set "SRC_AHK=Fortnite Queue Bot.ahk"
-set "OUT_EXE=Fortnite Queue Bot.exe"
-set "ICO_FILE=Fortnite Queue Bot.ico"
+set "SRC_AHK=FortniteQueueBot.ahk"
+set "OUT_EXE=FortniteQueueBot.exe"
+set "ICO_FILE=FortniteQueueBot.ico"
 
 if not exist "%SRC_AHK%" goto NO_SRC
 

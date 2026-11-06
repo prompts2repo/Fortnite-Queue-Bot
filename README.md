@@ -32,12 +32,12 @@ An automated matchmaking and queue cycle manager for **Fortnite**, built with **
 ## 🚀 Quick Start
 
 ### Option 1: Standalone Executable (Recommended)
-1. Download **`Fortnite Queue Bot.exe`** from the [Releases](https://github.com/prompts2repo/Fortnite-Queue-Bot/releases) section.
-2. Launch Fortnite, then run `Fortnite Queue Bot.exe`.
+1. Download **`FortniteQueueBot.exe`** from the [Releases](https://github.com/prompts2repo/Fortnite-Queue-Bot/releases) section.
+2. Launch Fortnite, then run `FortniteQueueBot.exe`.
 
 ### Option 2: From Source
 1. Install [AutoHotkey v2](https://www.autohotkey.com/v2/).
-2. Run `Fortnite Queue Bot.ahk`.
+2. Run `FortniteQueueBot.ahk`.
 
 ---
 
@@ -66,7 +66,7 @@ In the **SETTINGS** tab:
 
 To compile the script into a standalone `.exe`:
 1. Ensure [AutoHotkey v2](https://www.autohotkey.com/v2/) and `Ahk2Exe` are installed.
-2. Run **`Compila_EXE.bat`** to build `Fortnite Queue Bot.exe` with the bundled icon.
+2. Run **`Compiler_EXE.bat`** to build `FortniteQueueBot.exe` with the bundled icon.
 
 ---
 
