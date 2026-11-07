@@ -1,11 +1,11 @@
 # Fortnite Queue Bot 🎮
 
-[![Version](https://img.shields.io/badge/version-4.0-purple.svg)](https://github.com/prompts2repo/Fortnite-Queue-Bot)
+[![Version](https://img.shields.io/badge/version-4.2-purple.svg)](https://github.com/prompts2repo/Fortnite-Queue-Bot)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-blue.svg)](https://www.microsoft.com/windows)
 [![Language](https://img.shields.io/badge/language-AutoHotkey%20v2-334455.svg)](https://www.autohotkey.com/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-An automated matchmaking and queue cycle manager for **Fortnite**, built with **AutoHotkey v2**. Designed for **AFK event & pirate token farming** and early-game chest looting loops, featuring a native **Windows 11 Fluent UI**, **Smart Multitasking** background support, **Resolution Presets**, and **Full Multi-Monitor Auto-Detection**.
+An automated matchmaking and queue cycle manager for **Fortnite**, built with **AutoHotkey v2**. Designed for **AFK event & pirate token farming** and early-game chest looting loops, featuring a native **Windows 11 Fluent UI**, **Squad Auto-Leave** abandon detection, **Smart Multitasking** background support, **Resolution Presets**, and **Full Multi-Monitor Auto-Detection**.
 
 ---
 
@@ -20,6 +20,7 @@ An automated matchmaking and queue cycle manager for **Fortnite**, built with **
 ## 🌟 Key Features
 
 - **Lifetime & Session Statistics**: Displays live session metrics (match duration, lobby delay, session rounds, current session uptime) as well as persistent lifetime statistics (total completed rounds across all sessions, cumulative program execution time) directly on the dashboard.
+- **Squad Auto-Leave (Team Abandon Detection)**: Uses intelligent screen pixel detection to monitor the squad list. If all teammates abandon the match (or if you are left alone in the squad), the bot automatically aborts the match after the first 30 seconds and re-queues immediately without wasting time.
 - **Smart Multitasking Mode**: Brings Fortnite to the foreground only for 2–3 seconds to click, then instantly restores your previous active window and mouse position. Includes an optional 3-second audio pre-alert.
 - **Full Multi-Monitor Support**: Automatically detects which monitor runs Fortnite (left, right, top, or secondary) and normalizes coordinate offsets seamlessly.
 - **1-Click Resolution Presets**: Instant coordinate setup for `1080p` (FHD), `1440p` (2K/QHD), `4K` (UHD), and an `Auto-Detect` button for dynamic scaling.
@@ -45,7 +46,7 @@ An automated matchmaking and queue cycle manager for **Fortnite**, built with **
 
 In the **SETTINGS** tab:
 - **Timings**: Set match duration (minutes to stay in game) and lobby delay (seconds before readying up).
-- **Multitasking**: Enable Smart Mode and audio chime pre-alerts.
+- **Multitasking & Squad Auto-Leave**: Enable Smart Mode (background PC use) or Squad Auto-Leave (auto-exit if teammates abandon), and toggle audio alerts.
 - **Resolution**: Click your monitor preset (`1080p`, `1440p`, `4K`, or `Auto-Detect`), or customize button coordinates manually.
 - Click **Save Settings** to persist your preferences.
 

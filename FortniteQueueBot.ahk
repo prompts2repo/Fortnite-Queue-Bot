@@ -1,6 +1,7 @@
 #Requires AutoHotkey v2.0
 #SingleInstance Force
 CoordMode "Mouse", "Screen"
+CoordMode "Pixel", "Screen"
 
 ; Set explicit AppUserModelID so Windows Taskbar associates our custom icon and doesn't group under AutoHotkey
 try DllCall("shell32\SetCurrentProcessExplicitAppUserModelID", "WStr", "FortniteQueueBot.App")
@@ -12,7 +13,7 @@ if !FileExist(iconPath)
 try TraySetIcon(iconPath)
 
 ; ==========================================================
-; Fortnite Queue Bot — Windows 11 Fluent Gaming Dashboard (v4.0)
+; Fortnite Queue Bot — Windows 11 Fluent Gaming Dashboard (v4.2)
 ; ==========================================================
 
 ; Windows Registry configuration path (persists settings without creating any files on disk)
@@ -38,6 +39,10 @@ if !(initSmartRestore = 0 || initSmartRestore = 1)
 initAudioAlert   := Integer(RegRead(REG_SETTINGS, "AudioAlert", 1))
 if !(initAudioAlert = 0 || initAudioAlert = 1)
     initAudioAlert := 1
+
+initSquadAutoLeave := Integer(RegRead(REG_SETTINGS, "SquadAutoLeave", 0))
+if !(initSquadAutoLeave = 0 || initSquadAutoLeave = 1)
+    initSquadAutoLeave := 0
 
 ; Load persisted lifetime statistics across all sessions
 initTotalRounds     := Integer(RegRead(REG_SETTINGS, "TotalRounds", 0))
@@ -69,6 +74,8 @@ smartRestore := initSmartRestore
 selectedSmartRestore := initSmartRestore
 audioAlert := initAudioAlert
 selectedAudioAlert := initAudioAlert
+squadAutoLeave := initSquadAutoLeave
+selectedSquadAutoLeave := initSquadAutoLeave
 
 ; Theme Colors
 BG         := "0B0E14"   ; Midnight black background
@@ -162,7 +169,7 @@ CreateRoundedHBitmap(w, h, r, fillColor, borderColor := 0, borderWidth := 1, tex
 ; Each control receives a unique HBITMAP handle to avoid Win32 sharing errors
 ; ----------------------------------------------------------
 ; Header elements
-hVersionBadge    := CreateRoundedHBitmap(42, 20, 6, 0xFF182030, 0xFF2B374E, 1, "v4.0", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF0F131C)
+hVersionBadge    := CreateRoundedHBitmap(42, 20, 6, 0xFF182030, 0xFF2B374E, 1, "v4.2", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF0F131C)
 hTabDashActive   := CreateRoundedHBitmap(140, 36, 10, 0xFF7C3AED, 0, 0, "DASHBOARD", "Segoe UI", 10, 0xFFFFFFFF, true, 0xFF0F131C)
 hTabDashInactive := CreateRoundedHBitmap(140, 36, 10, 0xFF141A26, 0xFF222C3F, 1, "DASHBOARD", "Segoe UI", 10, 0xFF8E9AA8, true, 0xFF0F131C)
 hTabSetActive    := CreateRoundedHBitmap(140, 36, 10, 0xFF7C3AED, 0, 0, "SETTINGS", "Segoe UI", 10, 0xFFFFFFFF, true, 0xFF0F131C)
@@ -214,16 +221,22 @@ hPillActive_9    := CreateRoundedHBitmap(52, 34, 8, 0xFF7C3AED, 0, 0, "9", "Sego
 hPillInactive_9  := CreateRoundedHBitmap(52, 34, 8, 0xFF182030, 0xFF2B374E, 1, "9", "Segoe UI", 10, 0xFF8E9AA8, true, 0xFF131926)
 
 ; Smart Multitasking pill buttons
-hPillActive_SmartOn    := CreateRoundedHBitmap(80, 28, 6, 0xFF10B981, 0, 0, "ENABLED", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
-hPillInactive_SmartOn  := CreateRoundedHBitmap(80, 28, 6, 0xFF182030, 0xFF2B374E, 1, "ENABLED", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
-hPillActive_SmartOff   := CreateRoundedHBitmap(90, 28, 6, 0xFFE11D48, 0, 0, "DISABLED", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
-hPillInactive_SmartOff := CreateRoundedHBitmap(90, 28, 6, 0xFF182030, 0xFF2B374E, 1, "DISABLED", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
+hPillActive_SmartOn    := CreateRoundedHBitmap(72, 28, 6, 0xFF10B981, 0, 0, "ENABLED", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
+hPillInactive_SmartOn  := CreateRoundedHBitmap(72, 28, 6, 0xFF182030, 0xFF2B374E, 1, "ENABLED", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
+hPillActive_SmartOff   := CreateRoundedHBitmap(74, 28, 6, 0xFFE11D48, 0, 0, "DISABLED", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
+hPillInactive_SmartOff := CreateRoundedHBitmap(74, 28, 6, 0xFF182030, 0xFF2B374E, 1, "DISABLED", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
+
+; Squad Auto-Leave pill buttons
+hPillActive_SquadOn    := CreateRoundedHBitmap(72, 28, 6, 0xFF10B981, 0, 0, "ENABLED", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
+hPillInactive_SquadOn  := CreateRoundedHBitmap(72, 28, 6, 0xFF182030, 0xFF2B374E, 1, "ENABLED", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
+hPillActive_SquadOff   := CreateRoundedHBitmap(74, 28, 6, 0xFFE11D48, 0, 0, "DISABLED", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
+hPillInactive_SquadOff := CreateRoundedHBitmap(74, 28, 6, 0xFF182030, 0xFF2B374E, 1, "DISABLED", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
 
 ; Audio Pre-alert pill buttons
-hPillActive_AudioOn    := CreateRoundedHBitmap(78, 28, 6, 0xFF7C3AED, 0, 0, "BEEP ON", "Segoe UI", 9, 0xFFFFFFFF, true, 0xFF131926)
-hPillInactive_AudioOn  := CreateRoundedHBitmap(78, 28, 6, 0xFF182030, 0xFF2B374E, 1, "BEEP ON", "Segoe UI", 9, 0xFF8E9AA8, true, 0xFF131926)
-hPillActive_AudioOff   := CreateRoundedHBitmap(70, 28, 6, 0xFF64748B, 0, 0, "MUTED", "Segoe UI", 9, 0xFFFFFFFF, true, 0xFF131926)
-hPillInactive_AudioOff := CreateRoundedHBitmap(70, 28, 6, 0xFF182030, 0xFF2B374E, 1, "MUTED", "Segoe UI", 9, 0xFF8E9AA8, true, 0xFF131926)
+hPillActive_AudioOn    := CreateRoundedHBitmap(76, 28, 6, 0xFF7C3AED, 0, 0, "BEEP ON", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
+hPillInactive_AudioOn  := CreateRoundedHBitmap(76, 28, 6, 0xFF182030, 0xFF2B374E, 1, "BEEP ON", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
+hPillActive_AudioOff   := CreateRoundedHBitmap(68, 28, 6, 0xFF64748B, 0, 0, "MUTED", "Segoe UI", 8, 0xFFFFFFFF, true, 0xFF131926)
+hPillInactive_AudioOff := CreateRoundedHBitmap(68, 28, 6, 0xFF182030, 0xFF2B374E, 1, "MUTED", "Segoe UI", 8, 0xFF8E9AA8, true, 0xFF131926)
 
 ; Resolution Preset pill buttons
 hPillActive_1080p   := CreateRoundedHBitmap(68, 26, 6, 0xFF7C3AED, 0, 0, "1080p", "Segoe UI", 9, 0xFFFFFFFF, true, 0xFF131926)
@@ -467,38 +480,45 @@ KeyBtn_9 := AddCustomPicture("x556 y140 w52 h34 Hidden", initHotkey = "9" ? hPil
 KeyBtn_9.OnEvent("Click", (*) => SelectKey("9"))
 ClickableHwnds[KeyBtn_9.Hwnd] := true
 
-; Card 2: Smart Multitasking (PC Background Use)
+; Card 2: Smart Multitasking & Squad Auto-Leave
 Card2Pic := AddCustomPicture("x30 y194 w640 h94 Hidden", hSettingsCard2)
-MultiHead := MainGui.AddText("x50 y204 w500 h18 Background131926 cF8FAFC Hidden", "SMART MULTITASKING (BACKGROUND PC USE)")
+MultiHead := MainGui.AddText("x50 y204 w580 h18 Background131926 cF8FAFC Hidden", "SMART MULTITASKING && SQUAD AUTO-LEAVE")
 MultiHead.SetFont("s9 Bold", "Segoe UI")
-MultiSub := MainGui.AddText("x50 y222 w580 h16 Background131926 c8E9AA8 Hidden", "Restores active window and cursor position after each action to allow normal PC use.")
+MultiSub := MainGui.AddText("x50 y222 w580 h16 Background131926 c8E9AA8 Hidden", "Restores active window (Smart) and/or auto-leaves if all teammates abandon.")
 MultiSub.SetFont("s8", "Segoe UI")
 
-; Smart Mode Toggle Pills
+; Smart Mode Toggle Pills (Col 1)
 SmartLabel := MainGui.AddText("x50 y240 w150 h14 Background131926 c8E9AA8 Hidden", "SMART MODE")
 SmartLabel.SetFont("s8 Bold", "Segoe UI")
-SmartBtn_On := AddCustomPicture("x50 y256 w80 h28 Hidden", initSmartRestore = 1 ? hPillActive_SmartOn : hPillInactive_SmartOn)
+SmartBtn_On := AddCustomPicture("x50 y256 w72 h28 Hidden", initSmartRestore = 1 ? hPillActive_SmartOn : hPillInactive_SmartOn)
 SmartBtn_On.OnEvent("Click", (*) => SelectSmartRestore(1))
 ClickableHwnds[SmartBtn_On.Hwnd] := true
 
-SmartBtn_Off := AddCustomPicture("x136 y256 w90 h28 Hidden", initSmartRestore = 0 ? hPillActive_SmartOff : hPillInactive_SmartOff)
+SmartBtn_Off := AddCustomPicture("x126 y256 w74 h28 Hidden", initSmartRestore = 0 ? hPillActive_SmartOff : hPillInactive_SmartOff)
 SmartBtn_Off.OnEvent("Click", (*) => SelectSmartRestore(0))
 ClickableHwnds[SmartBtn_Off.Hwnd] := true
 
-; Audio Pre-alert Toggle Pills
-AudioLabel := MainGui.AddText("x250 y240 w160 h14 Background131926 c8E9AA8 Hidden", "AUDIO PRE-ALERT (3s)")
+; Squad Auto-Leave Toggle Pills (Col 2)
+SquadLabel := MainGui.AddText("x224 y240 w160 h14 Background131926 c8E9AA8 Hidden", "SQUAD AUTO-LEAVE")
+SquadLabel.SetFont("s8 Bold", "Segoe UI")
+SquadBtn_On := AddCustomPicture("x224 y256 w72 h28 Hidden", initSquadAutoLeave = 1 ? hPillActive_SquadOn : hPillInactive_SquadOn)
+SquadBtn_On.OnEvent("Click", (*) => SelectSquadAutoLeave(1))
+ClickableHwnds[SquadBtn_On.Hwnd] := true
+
+SquadBtn_Off := AddCustomPicture("x300 y256 w74 h28 Hidden", initSquadAutoLeave = 0 ? hPillActive_SquadOff : hPillInactive_SquadOff)
+SquadBtn_Off.OnEvent("Click", (*) => SelectSquadAutoLeave(0))
+ClickableHwnds[SquadBtn_Off.Hwnd] := true
+
+; Audio Pre-alert Toggle Pills (Col 3)
+AudioLabel := MainGui.AddText("x398 y240 w150 h14 Background131926 c8E9AA8 Hidden", "AUDIO ALERTS")
 AudioLabel.SetFont("s8 Bold", "Segoe UI")
-AudioBtn_On := AddCustomPicture("x250 y256 w78 h28 Hidden", initAudioAlert = 1 ? hPillActive_AudioOn : hPillInactive_AudioOn)
+AudioBtn_On := AddCustomPicture("x398 y256 w76 h28 Hidden", initAudioAlert = 1 ? hPillActive_AudioOn : hPillInactive_AudioOn)
 AudioBtn_On.OnEvent("Click", (*) => SelectAudioAlert(1))
 ClickableHwnds[AudioBtn_On.Hwnd] := true
 
-AudioBtn_Off := AddCustomPicture("x334 y256 w70 h28 Hidden", initAudioAlert = 0 ? hPillActive_AudioOff : hPillInactive_AudioOff)
+AudioBtn_Off := AddCustomPicture("x478 y256 w68 h28 Hidden", initAudioAlert = 0 ? hPillActive_AudioOff : hPillInactive_AudioOff)
 AudioBtn_Off.OnEvent("Click", (*) => SelectAudioAlert(0))
 ClickableHwnds[AudioBtn_Off.Hwnd] := true
-
-; Multi Info Tag
-MultiInfo := MainGui.AddText("x424 y244 w236 h40 Background131926 c566273 Hidden", "⚡ 3s countdown warning + instant window & cursor position restore.")
-MultiInfo.SetFont("s8", "Segoe UI")
 
 ; Card 3: Fortnite Coordinates & Resolution Presets
 Card3Pic := AddCustomPicture("x30 y296 w640 h144 Hidden", hSettingsCard3)
@@ -649,7 +669,7 @@ SettingsHint.SetFont("s8", "Segoe UI")
 SettingsControls := [Card1Pic, TimingHead, TimingSub, GameLabel, GameBoxPic, GameEdit, GameUnit
     , LobbyLabel, LobbyBoxPic, LobbyEdit, LobbyUnit
     , HotkeyLabel, KeyBtn_F8, KeyBtn_L, KeyBtn_9
-    , Card2Pic, MultiHead, MultiSub, SmartLabel, SmartBtn_On, SmartBtn_Off, AudioLabel, AudioBtn_On, AudioBtn_Off, MultiInfo
+    , Card2Pic, MultiHead, MultiSub, SmartLabel, SmartBtn_On, SmartBtn_Off, SquadLabel, SquadBtn_On, SquadBtn_Off, AudioLabel, AudioBtn_On, AudioBtn_Off
     , Card3Pic, CoordHead, CoordSub, PresetLbl, Btn_1080p, Btn_1440p, Btn_4K, Btn_Auto, PresetHint
     , PlayLabel, PlayXTag, PlayXBoxPic, PlayX, PlayYTag, PlayYBoxPic, PlayY
     , OptionsLabel, OptionsXTag, OptionsXBoxPic, OptionsX, OptionsYTag, OptionsYBoxPic, OptionsY
@@ -883,6 +903,14 @@ SelectSmartRestore(val) {
     SetCtrlBitmap(SmartBtn_Off, val = 0 ? hPillActive_SmartOff : hPillInactive_SmartOff)
 }
 
+SelectSquadAutoLeave(val) {
+    global selectedSquadAutoLeave, SquadBtn_On, SquadBtn_Off
+    global hPillActive_SquadOn, hPillInactive_SquadOn, hPillActive_SquadOff, hPillInactive_SquadOff
+    selectedSquadAutoLeave := val
+    SetCtrlBitmap(SquadBtn_On,  val = 1 ? hPillActive_SquadOn  : hPillInactive_SquadOn)
+    SetCtrlBitmap(SquadBtn_Off, val = 0 ? hPillActive_SquadOff : hPillInactive_SquadOff)
+}
+
 SelectAudioAlert(val) {
     global selectedAudioAlert, AudioBtn_On, AudioBtn_Off
     global hPillActive_AudioOn, hPillInactive_AudioOn, hPillActive_AudioOff, hPillInactive_AudioOff
@@ -986,7 +1014,7 @@ ApplyAutoDetect() {
 SaveSettings() {
     global InGameTime, LobbyTime, GameEdit, LobbyEdit, PlayBtn, OptionsBtn, LeaveBtn
     global PlayX, PlayY, OptionsX, OptionsY, LeaveX, LeaveY, selectedHotkey, startHotkey, StartBtn, running, REG_SETTINGS
-    global smartRestore, selectedSmartRestore, audioAlert, selectedAudioAlert
+    global smartRestore, selectedSmartRestore, audioAlert, selectedAudioAlert, squadAutoLeave, selectedSquadAutoLeave
 
     gVal := Trim(GameEdit.Value)
     lVal := Trim(LobbyEdit.Value)
@@ -1033,6 +1061,7 @@ SaveSettings() {
 
     smartRestore := selectedSmartRestore
     audioAlert := selectedAudioAlert
+    squadAutoLeave := selectedSquadAutoLeave
 
     ; Persist settings in Windows Registry (no external files needed, 100% portable single EXE)
     try {
@@ -1047,6 +1076,7 @@ SaveSettings() {
         RegWrite(newHotkey, "REG_SZ", REG_SETTINGS, "Hotkey")
         RegWrite(smartRestore, "REG_DWORD", REG_SETTINGS, "SmartRestore")
         RegWrite(audioAlert, "REG_DWORD", REG_SETTINGS, "AudioAlert")
+        RegWrite(squadAutoLeave, "REG_DWORD", REG_SETTINGS, "SquadAutoLeave")
     }
 
     ; Update Start button graphic with new hotkey
@@ -1064,6 +1094,7 @@ ResetSettings() {
     LobbyEdit.Value := "15"
     SelectKey("F8")
     SelectSmartRestore(0)
+    SelectSquadAutoLeave(0)
     SelectAudioAlert(1)
     ApplyAutoDetect()
     savedTotalR := totalRounds
@@ -1219,7 +1250,7 @@ MainLoop() {
             return
         gameStartTick := A_TickCount
         bypassMatch := false
-        if !WaitPhase(InGameTime, "In match", true)
+        if !WaitPhase(InGameTime, "In match", true, true)
             return
         phase := "Leaving match..."
         phaseTick := A_TickCount
@@ -1328,13 +1359,14 @@ DoLeaveAction() {
     }
 }
 
-WaitPhase(ms, label, enablePreAlert := false) {
-    global running, phase, phaseTick, smartRestore, audioAlert, bypassMatch
+WaitPhase(ms, label, enablePreAlert := false, enableSquadCheck := false) {
+    global running, phase, phaseTick, smartRestore, audioAlert, bypassMatch, squadAutoLeave, gameStartTick
     phase := label
     phaseTick := A_TickCount
     UpdateUI()
     end := A_TickCount + ms
     alertDone := false
+    lastSquadCheckTick := 0
 
     while A_TickCount < end {
         if !running {
@@ -1346,6 +1378,23 @@ WaitPhase(ms, label, enablePreAlert := false) {
         if (bypassMatch && phase = "In match") {
             bypassMatch := false
             return true
+        }
+
+        ; Automatic Squad Abandon Check: starts after 30s in match, checks every 5000ms
+        if (enableSquadCheck && squadAutoLeave && gameStartTick && (A_TickCount - gameStartTick >= 30000)) {
+            if (A_TickCount - lastSquadCheckTick >= 5000) {
+                lastSquadCheckTick := A_TickCount
+                if !CheckTeammatesPresent() {
+                    phase := "Squad abandoned! Leaving match early..."
+                    phaseTick := A_TickCount
+                    UpdateUI()
+                    if audioAlert
+                        SoundBeep 750, 200
+                    ToolTip "⚠️ Squad abandoned! Leaving match early..."
+                    SetTimer () => ToolTip(), -3000
+                    return true ; Exit wait loop immediately to trigger DoLeaveAction()
+                }
+            }
         }
 
         ; Pre-alert 3 seconds before action when Smart Multitasking is active
@@ -1360,6 +1409,69 @@ WaitPhase(ms, label, enablePreAlert := false) {
     }
     ToolTip
     return true
+}
+
+; ----------------------------------------------------------
+; Teammate Presence Visual Detector (Squad Auto-Leave)
+; Scans the 3 teammate HUD slots in bottom-left for player name white text pixels or health bar
+; Returns true if ANY teammate is detected; returns false if ALL have abandoned
+; ----------------------------------------------------------
+CheckTeammatesPresent() {
+    fnExe := "ahk_exe FortniteClient-Win64-Shipping.exe"
+    fnHwnd := WinExist(fnExe)
+    if !fnHwnd
+        return true ; If game window is not found, do not falsely abort
+
+    ; If Fortnite window is minimized to the taskbar, temporarily pause check to avoid false alarms
+    try {
+        minMax := WinGetMinMax("ahk_id " fnHwnd)
+        if (minMax == -1)
+            return true
+    }
+
+    ox := 0, oy := 0, fw := 0, fh := 0
+    if !GetFortniteOrigin(&ox, &oy, &fw, &fh)
+        return true
+
+    scaleX := fw / 1920.0
+    scaleY := fh / 1080.0
+
+    ; Teammate 1, 2, 3 name baseline Y-coordinates in 1080p HUD
+    slotNamesY := [748, 804, 860]
+    slotHealthY := [776, 832, 888]
+
+    baseX := 75
+    nameBoxW := 160
+    nameBoxH := 24
+    healthBoxW := 160
+    healthBoxH := 18
+
+    CoordMode "Pixel", "Screen"
+
+    for i in [1, 2, 3] {
+        ny := slotNamesY[i]
+        hy := slotHealthY[i]
+
+        nx1 := ox + Round(baseX * scaleX)
+        ny1 := oy + Round(ny * scaleY)
+        nx2 := ox + Round((baseX + nameBoxW) * scaleX)
+        ny2 := oy + Round((ny + nameBoxH) * scaleY)
+
+        hx1 := ox + Round(baseX * scaleX)
+        hy1 := oy + Round(hy * scaleY)
+        hx2 := ox + Round((baseX + healthBoxW) * scaleX)
+        hy2 := oy + Round((hy + healthBoxH) * scaleY)
+
+        ; 1. Search for bright white text pixels of teammate's name (#FFFFFF with 45 variation)
+        if PixelSearch(&fx, &fy, nx1, ny1, nx2, ny2, 0xFFFFFF, 45)
+            return true
+
+        ; 2. Search for green health bar pixels (#74D64D with 35 variation)
+        if PixelSearch(&fx, &fy, hx1, hy1, hx2, hy2, 0x74D64D, 35)
+            return true
+    }
+
+    return false
 }
 
 ClickAt(pos) {
@@ -1378,7 +1490,7 @@ UpdateUI(*) {
     global running, phase, phaseTick, gameStartTick, InGameTime, LoadTime, LobbyTime, rounds, totalRounds
     global StatusStripe, StatusDot, StatusText, PhaseText, TimerText, GameValue, LobbyValue, RoundsValue
     global SessionTimeValue, TotalRoundsValue, TotalRuntimeValue
-    global StartBtn, HomeHint, startHotkey, hStatusRed, hStatusGreen, HomeMultitaskTag, smartRestore
+    global StartBtn, HomeHint, startHotkey, hStatusRed, hStatusGreen, HomeMultitaskTag, smartRestore, squadAutoLeave
     global initTotalRuntimeSec, sessionActiveSec, activeStartTick, REG_SETTINGS
 
     static prevRunning := -1
@@ -1392,6 +1504,7 @@ UpdateUI(*) {
     static prevTotalRuntime := ""
     static prevHotkey := ""
     static prevSmart := -1
+    static prevSquad := -1
     static lastPersistTick := 0
 
     ; Calculate active execution time (only accumulates when Auto Queue is active)
@@ -1489,14 +1602,21 @@ UpdateUI(*) {
         HomeHint.Text := "[ " StrUpper(startHotkey) " ]  START / STOP   •   [ F7 ]  BYPASS   •   [ F9 ]  COPY COORDS   •   [ F10 ]  EXIT"
     }
 
-    ; Smart Multitasking tag on dashboard
-    if (smartRestore != prevSmart) {
+    ; Smart Multitasking & Squad Auto-Leave tag on dashboard
+    if (smartRestore != prevSmart || squadAutoLeave != prevSquad) {
         prevSmart := smartRestore
-        if smartRestore {
-            HomeMultitaskTag.Text := "⚡ SMART MULTITASKING: ENABLED  (Normal PC use allowed during matches)"
+        prevSquad := squadAutoLeave
+        if (smartRestore && squadAutoLeave) {
+            HomeMultitaskTag.Text := "⚡ SMART MULTITASKING: ON   •   🛡 SQUAD AUTO-LEAVE: ON"
+            HomeMultitaskTag.SetFont("c10B981")
+        } else if smartRestore {
+            HomeMultitaskTag.Text := "⚡ SMART MULTITASKING: ENABLED   •   🛡 SQUAD CHECK: OFF"
+            HomeMultitaskTag.SetFont("c10B981")
+        } else if squadAutoLeave {
+            HomeMultitaskTag.Text := "⚡ SMART MULTITASKING: OFF   •   🛡 SQUAD AUTO-LEAVE: ENABLED"
             HomeMultitaskTag.SetFont("c10B981")
         } else {
-            HomeMultitaskTag.Text := "⚡ SMART MULTITASKING: DISABLED  (Enable in Settings to use PC during matches)"
+            HomeMultitaskTag.Text := "⚡ SMART MULTITASKING: DISABLED   •   🛡 SQUAD CHECK: DISABLED"
             HomeMultitaskTag.SetFont("c8E9AA8")
         }
     }
