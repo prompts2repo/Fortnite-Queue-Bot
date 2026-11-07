@@ -58,6 +58,7 @@ totalRuntimeSec := initTotalRuntimeSec
 sessionActiveSec := 0
 activeStartTick := 0
 matchInProgress := false
+bypassMatch := false
 phase := "Ready"
 phaseTick := 0
 gameStartTick := 0
@@ -404,7 +405,7 @@ ClickableHwnds[StartBtn.Hwnd] := true
 
 ; Hotkey Footer Strip
 FooterPic := AddCustomPicture("x30 y472 w640 h44", hFooterStrip)
-HomeHint := MainGui.AddText("x30 y484 w640 h20 Background101520 c8E9AA8 Center", "[ " StrUpper(startHotkey) " ]  START / STOP      •      [ F9 ]  COPY COORDS      •      [ F10 ]  EXIT")
+HomeHint := MainGui.AddText("x30 y484 w640 h20 Background101520 c8E9AA8 Center", "[ " StrUpper(startHotkey) " ]  START / STOP   •   [ F7 ]  BYPASS   •   [ F9 ]  COPY COORDS   •   [ F10 ]  EXIT")
 HomeHint.SetFont("s8 Bold", "Segoe UI")
 
 ; Multitasking Indicator Line
@@ -732,6 +733,26 @@ SetTimer UpdateUI, 250
 HotIf HotkeyContext
 Hotkey(startHotkey, ToggleRunning, "On")
 HotIf
+
+; F7 Match Bypass: skips remaining in-match countdown, immediately exits to lobby and starts a new match
+#HotIf running || WinActive("ahk_id " MainGui.Hwnd)
+F7:: {
+    global running, phase, bypassMatch, audioAlert, startHotkey
+    if (running && phase = "In match") {
+        bypassMatch := true
+        if audioAlert
+            SoundBeep 1046, 150
+        ToolTip "⚡ Match countdown bypassed! Leaving match..."
+        SetTimer () => ToolTip(), -2000
+    } else if (running) {
+        ToolTip "⚠️ F7 bypass is only available during an active match."
+        SetTimer () => ToolTip(), -2000
+    } else {
+        ToolTip "⚠️ Auto Queue is not running. Press Start or hit " StrUpper(startHotkey) " first."
+        SetTimer () => ToolTip(), -2000
+    }
+}
+#HotIf
 
 ; Smart Multi-Monitor F9: automatically calculates coordinates relative to Fortnite canvas
 F9:: {
@@ -1084,7 +1105,8 @@ HotkeyContext(*) {
 
 ToggleRunning(*) {
     global running, phase, phaseTick, gameStartTick, activeStartTick, sessionActiveSec, initTotalRuntimeSec, REG_SETTINGS
-    global matchInProgress, rounds, totalRounds
+    global matchInProgress, rounds, totalRounds, bypassMatch
+    bypassMatch := false
     running := !running
     if running {
         phase := "Starting queue..."
@@ -1184,7 +1206,7 @@ ForceWinActivate(hwnd) {
 
 MainLoop() {
     global running, PlayBtn, OptionsBtn, LeaveBtn, InGameTime, LoadTime, LobbyTime, rounds, totalRounds, REG_SETTINGS
-    global phase, phaseTick, gameStartTick, matchInProgress
+    global phase, phaseTick, gameStartTick, matchInProgress, bypassMatch
     while running {
         phase := "Searching for a match..."
         phaseTick := A_TickCount
@@ -1196,6 +1218,7 @@ MainLoop() {
         if !WaitPhase(LoadTime, "Match loading...")
             return
         gameStartTick := A_TickCount
+        bypassMatch := false
         if !WaitPhase(InGameTime, "In match", true)
             return
         phase := "Leaving match..."
@@ -1306,7 +1329,7 @@ DoLeaveAction() {
 }
 
 WaitPhase(ms, label, enablePreAlert := false) {
-    global running, phase, phaseTick, smartRestore, audioAlert
+    global running, phase, phaseTick, smartRestore, audioAlert, bypassMatch
     phase := label
     phaseTick := A_TickCount
     UpdateUI()
@@ -1317,6 +1340,12 @@ WaitPhase(ms, label, enablePreAlert := false) {
         if !running {
             ToolTip
             return false
+        }
+
+        ; Bypass match countdown early when F7 is pressed
+        if (bypassMatch && phase = "In match") {
+            bypassMatch := false
+            return true
         }
 
         ; Pre-alert 3 seconds before action when Smart Multitasking is active
@@ -1457,7 +1486,7 @@ UpdateUI(*) {
 
     if (startHotkey != prevHotkey) {
         prevHotkey := startHotkey
-        HomeHint.Text := "[ " StrUpper(startHotkey) " ]  START / STOP      •      [ F9 ]  COPY COORDS      •      [ F10 ]  EXIT"
+        HomeHint.Text := "[ " StrUpper(startHotkey) " ]  START / STOP   •   [ F7 ]  BYPASS   •   [ F9 ]  COPY COORDS   •   [ F10 ]  EXIT"
     }
 
     ; Smart Multitasking tag on dashboard

@@ -56,6 +56,7 @@ In the **SETTINGS** tab:
 | Shortcut | Action | Description |
 | :---: | :--- | :--- |
 | <kbd>F8</kbd> *(default)* | **Start / Stop** | Toggles the automated matchmaking cycle (can be changed to `L` or `9`). |
+| <kbd>F7</kbd> | **Bypass Match** | Skips the remaining in-match countdown, immediately exits to lobby and queues up for a new match. |
 | <kbd>F9</kbd> | **Copy Coordinates** | Copies in-game cursor coordinates to clipboard for easy pasting into Settings. |
 | <kbd>F10</kbd> | **Exit** | Immediately closes the bot. |
 | <kbd>Esc</kbd> | **Emergency Stop** | Halts the active queue cycle when the bot window is focused. |
